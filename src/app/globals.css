@@ -1,0 +1,114 @@
+@import "tailwindcss";
+
+/* ===== LIGHT MODE (Fresh Mint) ===== */
+:root {
+  --background: #f0fdf4;
+  --foreground: #166534;
+  --primary: #22c55e;
+  --accent: #166534;
+  --secondary: #dcfce7;
+  --surface: #ffffff;
+  --border: #bbf7d0;
+  --text-muted: #4ade80;
+}
+
+/* ===== DARK MODE (Deep Forest) ===== */
+[data-theme="dark"] {
+  --background: #030c06; /* Near-black deep forest */
+  --foreground: #bbfbd0; /* Soft mint text - very easy on eyes */
+  --primary: #4ade80; /* Brighter neon mint for dark bg */
+  --accent: #86efac; /* Lighter green for headings */
+  --secondary: #0d1f14; /* Deep green card bg */
+  --surface: #0d1f14;
+  --border: #1a3526;
+  --text-muted: #365314;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-primary: var(--primary);
+  --color-accent: var(--accent);
+  --color-secondary: var(--secondary);
+  --color-border: var(--border);
+  --color-surface: var(--surface);
+
+  --radius-bento: 2rem;
+  --radius-item: 1.5rem;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-be-vietnam), system-ui, sans-serif;
+  margin: 0;
+  -webkit-tap-highlight-color: transparent;
+  overflow-x: hidden;
+  transition:
+    background-color 0.4s ease,
+    color 0.4s ease;
+}
+
+/* Bento Boxes */
+.bento-box {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-bento);
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+[data-theme="dark"] .bento-box {
+  box-shadow:
+    0 0 0 1px var(--border),
+    0 20px 40px rgba(0, 0, 0, 0.5);
+}
+
+.bento-item {
+  background: var(--secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-item);
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+button {
+  cursor: pointer;
+}
+
+.bento-item:active {
+  transform: scale(0.97);
+  border-color: var(--primary);
+}
+
+/* Dark mode glow on hover */
+[data-theme="dark"] .bento-item:hover {
+  box-shadow: 0 0 20px rgba(74, 222, 128, 0.15);
+  border-color: var(--primary);
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 5px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 10px;
+}
+
+/* Animation */
+@keyframes bentoPop {
+  0% {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+.animate-bento {
+  animation: bentoPop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
