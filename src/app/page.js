@@ -1,15 +1,10 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import {
-  ShoppingBag,
-  Leaf,
-  Sun,
-  Moon
-} from 'lucide-react';
+import { ShoppingBag, Leaf, Sun, Moon } from 'lucide-react';
 import MenuGrid from '../components/pos/MenuGrid';
-import DesktopCart from '../components/pos/DesktopCart';
-import MobileCartSheet from '../components/pos/MobileCartSheet';
+import Cart from '../components/pos/Cart';
+import QuickTagModal from '../components/pos/QuickTagModal';
 
 const MENU_ITEMS = [
   { id: 1, name: 'Gỏi Cuốn Tôm Thịt', price: 25000, category: 'Healthy', image: '🥗' },
@@ -22,53 +17,86 @@ const MENU_ITEMS = [
   { id: 8, name: 'Hạt Ngũ Cốc', price: 10000, category: 'Snack', image: '🥜' },
 ];
 
+let uidCounter = 0;
+
 export default function Home() {
   const [mounted, setMounted] = useState(false);
   const [isDark, setIsDark] = useState(false);
   const [cart, setCart] = useState([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [discountPercent, setDiscountPercent] = useState(0);
+  const [editingItem, setEditingItem] = useState(null); // item being tag-edited
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  // Sync theme with html data-theme attribute
+  useEffect(() => { setMounted(true); }, []);
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
   }, [isDark]);
 
+  // Check if identical row exists (same id, no tags, no customNote)
   const addToCart = (item) => {
-    setCart((prev) => {
-      const existing = prev.find(i => i.id === item.id);
-      if (existing) return prev.map(i => i.id === item.id ? { ...i, quantity: i.quantity + 1 } : i);
-      return [...prev, { ...item, quantity: 1 }];
+    setCart(prev => {
+      const existingIdx = prev.findIndex(i => i.id === item.id && (!i.tags || i.tags.length === 0) && !i.customNote);
+      if (existingIdx >= 0) {
+        const newCart = [...prev];
+        newCart[existingIdx].quantity += 1;
+        return newCart;
+      }
+      return [...prev, { ...item, uid: `${item.id}-${++uidCounter}`, quantity: 1, tags: [], customNote: '' }];
     });
     if (typeof window !== 'undefined' && window.navigator.vibrate) window.navigator.vibrate(40);
   };
 
-  const removeFromCart = (id) => {
-    setCart((prev) =>
-      prev.map(i => i.id === id ? { ...i, quantity: i.quantity - 1 } : i).filter(i => i.quantity > 0)
-    );
+  const updateQuantity = (uid, delta) => {
+    setCart(prev => prev.map(i => {
+      if (i.uid === uid) return { ...i, quantity: i.quantity + delta };
+      return i;
+    }).filter(i => i.quantity > 0));
+  };
+
+  const updateItemTags = (uid, tags, customNote) => {
+    setCart(prev => {
+      const updated = prev.map(i => i.uid === uid ? { ...i, tags, customNote } : i);
+
+      // Consolidate: Merge items that now have identical ID, Tags, and CustomNote
+      const merged = [];
+      updated.forEach(item => {
+        const tagsStr = [...(item.tags || [])].sort().join(',');
+        const noteStr = (item.customNote || '').trim().toLowerCase();
+        
+        const existing = merged.find(m => 
+          m.id === item.id && 
+          [...(m.tags || [])].sort().join(',') === tagsStr &&
+          (m.customNote || '').trim().toLowerCase() === noteStr
+        );
+
+        if (existing) {
+          existing.quantity += item.quantity;
+        } else {
+          merged.push({ ...item });
+        }
+      });
+      return merged;
+    });
   };
 
   const clearCart = () => {
     setCart([]);
     setDiscountPercent(0);
+    uidCounter = 0;
   };
 
   const checkout = () => {
     if (cart.length === 0) return;
     clearCart();
-    setIsCartOpen(false); // Close drawer on mobile
+    setIsCartOpen(false);
     if (typeof window !== 'undefined' && window.navigator.vibrate) window.navigator.vibrate(100);
     alert('Đơn hàng đã được xác nhận!');
   };
 
-  const subtotal = cart.reduce((s, i) => s + i.price * i.quantity, 0);
+  const subtotal = cart.reduce((s, i) => s + (i.price * i.quantity), 0);
   const discountAmount = subtotal * ((discountPercent || 0) / 100);
   const total = subtotal - discountAmount;
+  const totalItems = cart.reduce((s, i) => s + i.quantity, 0);
 
   if (!mounted) return <div className="min-h-screen bg-background" />;
 
@@ -99,28 +127,22 @@ export default function Home() {
             className="bento-item p-2 sm:p-3 flex items-center justify-center hover:border-primary hover:shadow-md hover:bg-white transition-all shrink-0"
             title="Đổi sáng/tối"
           >
-            {isDark
-              ? <Sun size={18} className="text-primary sm:hidden" />
-              : <Moon size={18} className="text-accent opacity-60 sm:hidden" />
-            }
-            {isDark
-              ? <Sun size={20} className="text-primary hidden sm:block" />
-              : <Moon size={20} className="text-accent opacity-60 hidden sm:block" />
-            }
+            {isDark ? <Sun size={18} className="text-primary sm:hidden" /> : <Moon size={18} className="text-accent opacity-60 sm:hidden" />}
+            {isDark ? <Sun size={20} className="text-primary hidden sm:block" /> : <Moon size={20} className="text-accent opacity-60 hidden sm:block" />}
           </button>
 
           {/* Cart Button */}
           <button
             onClick={() => setIsCartOpen(true)}
-            className="bento-item border-2 border-primary/20 p-2 sm:p-3 px-3 sm:px-5 hover:border-primary hover:bg-white hover:shadow-md transition-all flex items-center gap-2 sm:gap-3 min-w-0 max-w-[120px] sm:max-w-none font-bold text-accent"
+            className="lg:hidden bento-item border-2 border-primary/20 p-2 sm:p-3 px-3 sm:px-5 hover:border-primary hover:bg-white hover:shadow-md transition-all flex items-center gap-2 sm:gap-3 min-w-0 max-w-[120px] sm:max-w-none font-bold text-accent"
           >
             <ShoppingBag className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" />
             <span className="text-[10px] sm:text-sm font-black truncate">
-              {cart.length > 0 ? `${total.toLocaleString('vi-VN')}đ` : 'Khay'}
+              {totalItems > 0 ? `${total.toLocaleString('vi-VN')}đ` : 'Khay'}
             </span>
-            {cart.length > 0 && (
+            {totalItems > 0 && (
               <span className="bg-primary text-white text-[9px] sm:text-xs font-black w-4 h-4 sm:w-5 sm:h-5 rounded-full flex items-center justify-center shrink-0">
-                {cart.reduce((s, i) => s + i.quantity, 0)}
+                {totalItems}
               </span>
             )}
           </button>
@@ -131,32 +153,29 @@ export default function Home() {
       <main className="flex-1 flex gap-4 overflow-hidden min-h-0">
         <MenuGrid menuItems={MENU_ITEMS} addToCart={addToCart} />
 
-        <DesktopCart 
+        <Cart
+          isCartOpen={isCartOpen}
+          setIsCartOpen={setIsCartOpen}
           cart={cart}
           total={total}
           subtotal={subtotal}
           discountPercent={discountPercent}
           setDiscountPercent={setDiscountPercent}
-          addToCart={addToCart}
-          removeFromCart={removeFromCart}
+          updateQuantity={updateQuantity}
           clearCart={clearCart}
           checkout={checkout}
+          onEditTags={setEditingItem}
         />
       </main>
 
-      <MobileCartSheet 
-        isCartOpen={isCartOpen}
-        setIsCartOpen={setIsCartOpen}
-        cart={cart}
-        total={total}
-        subtotal={subtotal}
-        discountPercent={discountPercent}
-        setDiscountPercent={setDiscountPercent}
-        addToCart={addToCart}
-        removeFromCart={removeFromCart}
-        clearCart={clearCart}
-        checkout={checkout}
-      />
+      {/* Quick Tag Modal — shared for desktop and mobile */}
+      {editingItem && (
+        <QuickTagModal
+          item={editingItem}
+          onClose={() => setEditingItem(null)}
+          onSave={updateItemTags}
+        />
+      )}
     </div>
   );
 }
