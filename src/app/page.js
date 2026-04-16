@@ -31,6 +31,7 @@ export default function Home() {
   const [isDark, setIsDark] = useState(false);
   const [cart, setCart] = useState([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
+  const [discountPercent, setDiscountPercent] = useState(0);
 
   useEffect(() => {
     setMounted(true);
@@ -56,7 +57,22 @@ export default function Home() {
     );
   };
 
-  const total = cart.reduce((s, i) => s + i.price * i.quantity, 0);
+  const clearCart = () => {
+    setCart([]);
+    setDiscountPercent(0);
+  };
+
+  const checkout = () => {
+    if (cart.length === 0) return;
+    clearCart();
+    setIsCartOpen(false); // Close drawer on mobile
+    if (typeof window !== 'undefined' && window.navigator.vibrate) window.navigator.vibrate(100);
+    alert('Đơn hàng đã được xác nhận!');
+  };
+
+  const subtotal = cart.reduce((s, i) => s + i.price * i.quantity, 0);
+  const discountAmount = subtotal * ((discountPercent || 0) / 100);
+  const total = subtotal - discountAmount;
 
   if (!mounted) return <div className="min-h-screen bg-background" />;
 
@@ -162,7 +178,12 @@ export default function Home() {
             <h3 className="text-sm font-black uppercase tracking-widest flex items-center gap-2">
               <Circle size={8} className="fill-primary text-primary animate-pulse" /> Đơn hàng
             </h3>
-            <span className="text-[10px] font-black opacity-30">#POS-001</span>
+            <div className="flex items-center gap-3">
+              {cart.length > 0 && (
+                <button onClick={clearCart} className="text-[10px] font-black text-red-500 uppercase hover:underline">Xóa hết</button>
+              )}
+              <span className="text-[10px] font-black opacity-30">#POS-001</span>
+            </div>
           </div>
 
           <div className="flex-1 min-h-0 overflow-y-auto p-5 space-y-3">
@@ -192,8 +213,22 @@ export default function Home() {
           </div>
 
           <div className="p-5 border-t border-border space-y-4 bg-background shrink-0">
+            <div className="flex items-center justify-between gap-2 border border-border bg-surface p-2 rounded-[1rem]">
+              <span className="text-[10px] font-black uppercase px-2 text-accent tracking-widest">Giảm giá (%)</span>
+              <input 
+                type="number" 
+                min="0" max="100" 
+                value={discountPercent || ''} 
+                onChange={(e) => setDiscountPercent(Number(e.target.value))}
+                placeholder="0"
+                className="w-16 bg-background text-right font-black text-primary p-2 rounded-xl focus:outline-none border-2 border-transparent focus:border-primary/30"
+              />
+            </div>
             <div className="flex justify-between items-end">
-              <span className="text-[10px] font-black uppercase opacity-40 tracking-widest">Tổng cộng</span>
+              <div className="flex flex-col">
+                <span className="text-[10px] font-black uppercase opacity-40 tracking-widest">Tổng cộng</span>
+                {discountPercent > 0 && <span className="text-[10px] font-bold text-red-500 line-through">{subtotal.toLocaleString('vi-VN')}đ</span>}
+              </div>
               <span className="text-3xl font-black text-primary tracking-tighter">{total.toLocaleString('vi-VN')}đ</span>
             </div>
             <div className="grid grid-cols-2 gap-2">
@@ -208,6 +243,7 @@ export default function Home() {
             </div>
             <button
               disabled={cart.length === 0}
+              onClick={checkout}
               className="w-full py-4 bg-accent text-white rounded-[1.5rem] font-black uppercase tracking-widest hover:opacity-90 transition-all disabled:opacity-20"
             >
               Xác nhận
@@ -224,7 +260,12 @@ export default function Home() {
             <div className="p-4 sm:p-6 border-b border-border flex justify-between items-center bg-secondary/20">
               <div>
                 <h2 className="text-lg sm:text-xl font-black uppercase text-accent leading-none">Giỏ hàng của bạn</h2>
-                <p className="text-[10px] font-bold opacity-30 mt-1 uppercase tracking-widest">Street Food POS</p>
+                <div className="flex items-center gap-3 mt-1">
+                  <p className="text-[10px] font-bold opacity-30 uppercase tracking-widest">Street Food POS</p>
+                  {cart.length > 0 && (
+                    <button onClick={clearCart} className="text-[10px] font-black text-red-500 uppercase hover:underline">Xóa hết</button>
+                  )}
+                </div>
               </div>
               <button
                 onClick={() => setIsCartOpen(false)}
@@ -261,9 +302,23 @@ export default function Home() {
             </div>
 
             <div className="p-4 sm:p-6 bg-background border-t border-border space-y-4">
+              <div className="flex items-center justify-between gap-2 border border-border bg-surface p-2 rounded-2xl">
+                <span className="text-xs font-black uppercase px-2 text-accent tracking-widest">Giảm giá (%)</span>
+                <input 
+                  type="number" 
+                  min="0" max="100" 
+                  value={discountPercent || ''} 
+                  onChange={(e) => setDiscountPercent(Number(e.target.value))}
+                  placeholder="0"
+                  className="w-20 bg-background text-right font-black text-xl text-primary p-2 rounded-xl focus:outline-none border-2 border-transparent focus:border-primary/30"
+                />
+              </div>
               <div className="flex justify-between items-center px-1">
-                <span className="text-xs font-black opacity-40 uppercase tracking-widest">Tổng tiền</span>
-                <span className="text-3xl font-black text-primary tracking-tighter">{total.toLocaleString('vi-VN')}đ</span>
+                <div className="flex flex-col">
+                  <span className="text-xs font-black opacity-40 uppercase tracking-widest">Tổng tiền</span>
+                  {discountPercent > 0 && <span className="text-[10px] font-bold text-red-500 line-through">{subtotal.toLocaleString('vi-VN')}đ</span>}
+                </div>
+                <span className="text-3xl sm:text-4xl font-black text-primary tracking-tighter">{total.toLocaleString('vi-VN')}đ</span>
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <button className="flex flex-col items-center justify-center p-3 sm:p-4 rounded-2xl border border-border bg-surface hover:border-primary transition-all active:scale-95 group">
@@ -275,7 +330,10 @@ export default function Home() {
                   <span className="text-[10px] font-black uppercase">Tiền mặt</span>
                 </button>
               </div>
-              <button className="w-full py-4 bg-accent text-white rounded-2xl font-black text-lg uppercase tracking-widest shadow-xl active:scale-95 transition-all disabled:opacity-30">
+              <button 
+                disabled={cart.length === 0}
+                onClick={checkout}
+                className="w-full py-4 bg-accent text-white rounded-2xl font-black text-lg uppercase tracking-widest shadow-xl active:scale-95 transition-all disabled:opacity-30">
                 Xác nhận & In bill
               </button>
             </div>
