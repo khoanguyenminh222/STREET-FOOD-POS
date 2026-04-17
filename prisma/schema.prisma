@@ -1,0 +1,23 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model DonHang {
+  id              String   @id @default(uuid())
+  maDonHang       String   // Mã hiển thị (VD: ORD-1234)
+  tongTien        Float
+  tamTinh         Float    // Tiền gốc tổng các món CỘNG LẠI (Chưa trừ giảm giá). Cần có để in bill (Tạm tính -> Giảm giá -> Tổng tiền).
+  tienGiamGia     Float
+  phanTramGiamGia Float
+  phuongThucTT    String   // 'tien_mat', 'chuyen_khoan'
+  trangThai       String   // 'da_tra', 'da_luu', 'huy'
+  danhSachMonAn   String   // Mảng JSON chứa chi tiết món (lưu mảng này siêu tiện lợi)
+  ngayTao         DateTime @default(now())
+}

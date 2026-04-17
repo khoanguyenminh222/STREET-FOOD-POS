@@ -40,6 +40,21 @@ export default function Home() {
     document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
   }, [isDark]);
 
+  // DB Sync: Fetch orders on mount
+  useEffect(() => {
+    if (mounted) fetchOrders();
+  }, [mounted]);
+
+  const fetchOrders = async () => {
+    try {
+      const res = await fetch('/api/orders');
+      const data = await res.json();
+      if (Array.isArray(data)) setOrders(data);
+    } catch (err) {
+      console.error('Fetch orders error:', err);
+    }
+  };
+
   // Check if identical row exists (same id, no tags, no customNote)
   const addToCart = (item) => {
     setCart(prev => {
@@ -98,10 +113,8 @@ export default function Home() {
     setIsCheckoutModalOpen(true);
   };
 
-  const confirmCheckout = (status = 'paid') => {
-    const newOrder = {
-      id: `ORD-${Date.now().toString().slice(-6)}`,
-      timestamp: Date.now(),
+  const confirmCheckout = async (status = 'paid') => {
+    const orderData = {
       items: [...cart],
       total,
       subtotal,
@@ -110,20 +123,45 @@ export default function Home() {
       paymentMethod,
       status
     };
-    setOrders(prev => [...prev, newOrder]);
-    clearCart();
-    setIsCheckoutModalOpen(false);
-    setIsCartOpen(false);
-    if (typeof window !== 'undefined' && window.navigator.vibrate) window.navigator.vibrate(100);
+
+    try {
+      const res = await fetch('/api/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(orderData),
+      });
+
+      if (res.ok) {
+        fetchOrders(); // Refresh history from DB
+        clearCart();
+        setIsCheckoutModalOpen(false);
+        setIsCartOpen(false);
+        if (typeof window !== 'undefined' && window.navigator.vibrate) window.navigator.vibrate(100);
+      }
+    } catch (err) {
+      console.error('Checkout error:', err);
+      alert('Không thể lưu đơn hàng. Vui lòng kiểm tra lại kết nối!');
+    }
   };
 
-  const markOrderAsPaid = (orderId) => {
-    setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: 'paid' } : o));
-    if (typeof window !== 'undefined' && window.navigator.vibrate) window.navigator.vibrate(50);
+  const markOrderAsPaid = async (orderId) => {
+    try {
+      const res = await fetch(`/api/orders/${orderId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'paid' }),
+      });
+      if (res.ok) {
+        fetchOrders();
+        if (typeof window !== 'undefined' && window.navigator.vibrate) window.navigator.vibrate(50);
+      }
+    } catch (err) {
+      console.error('Mark as paid error:', err);
+    }
   };
 
-  const editOrder = (orderId) => {
-    const orderToEdit = orders.find(o => o.id === orderId);
+  const editOrder = async (orderId) => {
+    const orderToEdit = orders.find(o => o.maDonHang === orderId);
     if (!orderToEdit) return;
     
     // Warn if cart has items
@@ -131,15 +169,22 @@ export default function Home() {
       if (!window.confirm("Giỏ hàng đang có món. Xác nhận xóa giỏ hiện tại để sửa lại đơn cũ này?")) return;
     }
 
-    setCart(orderToEdit.items);
-    setDiscountPercent(orderToEdit.discountPercent || 0);
-    setPaymentMethod(orderToEdit.paymentMethod || 'cash');
-    
-    // Remove order from history so it doesn't duplicate
-    setOrders(prev => prev.filter(o => o.id !== orderId));
-    
-    setIsOrderHistoryOpen(false);
-    setIsCartOpen(true);
+    try {
+      // Remove order from DB first (effectively "voiding" it to edit)
+      const res = await fetch(`/api/orders/${orderId}`, { method: 'DELETE' });
+      
+      if (res.ok) {
+        setCart(orderToEdit.items);
+        setDiscountPercent(orderToEdit.phanTramGiamGia || 0);
+        setPaymentMethod(orderToEdit.phuongThucTT === 'tien_mat' ? 'cash' : 'vietqr');
+        
+        fetchOrders(); // Refresh list
+        setIsOrderHistoryOpen(false);
+        setIsCartOpen(true);
+      }
+    } catch (err) {
+      console.error('Edit order error:', err);
+    }
   };
 
   const subtotal = cart.reduce((s, i) => s + (i.price * i.quantity), 0);
