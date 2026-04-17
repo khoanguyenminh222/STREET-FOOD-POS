@@ -1,10 +1,12 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { ShoppingBag, Leaf, Sun, Moon } from 'lucide-react';
+import { ShoppingBag, Leaf, Sun, Moon, Clock } from 'lucide-react';
 import MenuGrid from '../components/pos/MenuGrid';
 import Cart from '../components/pos/Cart';
 import QuickTagModal from '../components/pos/QuickTagModal';
+import CheckoutModal from '../components/pos/CheckoutModal';
+import OrderHistory from '../components/pos/OrderHistory';
 
 const MENU_ITEMS = [
   { id: 1, name: 'Gỏi Cuốn Tôm Thịt', price: 25000, category: 'Healthy', image: '🥗' },
@@ -26,6 +28,12 @@ export default function Home() {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [discountPercent, setDiscountPercent] = useState(0);
   const [editingItem, setEditingItem] = useState(null); // item being tag-edited
+  
+  // Checkout & History State
+  const [orders, setOrders] = useState([]);
+  const [paymentMethod, setPaymentMethod] = useState('cash');
+  const [isCheckoutModalOpen, setIsCheckoutModalOpen] = useState(false);
+  const [isOrderHistoryOpen, setIsOrderHistoryOpen] = useState(false);
 
   useEffect(() => { setMounted(true); }, []);
   useEffect(() => {
@@ -87,10 +95,51 @@ export default function Home() {
 
   const checkout = () => {
     if (cart.length === 0) return;
+    setIsCheckoutModalOpen(true);
+  };
+
+  const confirmCheckout = (status = 'paid') => {
+    const newOrder = {
+      id: `ORD-${Date.now().toString().slice(-6)}`,
+      timestamp: Date.now(),
+      items: [...cart],
+      total,
+      subtotal,
+      discountAmount,
+      discountPercent,
+      paymentMethod,
+      status
+    };
+    setOrders(prev => [...prev, newOrder]);
     clearCart();
+    setIsCheckoutModalOpen(false);
     setIsCartOpen(false);
     if (typeof window !== 'undefined' && window.navigator.vibrate) window.navigator.vibrate(100);
-    alert('Đơn hàng đã được xác nhận!');
+  };
+
+  const markOrderAsPaid = (orderId) => {
+    setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: 'paid' } : o));
+    if (typeof window !== 'undefined' && window.navigator.vibrate) window.navigator.vibrate(50);
+  };
+
+  const editOrder = (orderId) => {
+    const orderToEdit = orders.find(o => o.id === orderId);
+    if (!orderToEdit) return;
+    
+    // Warn if cart has items
+    if (cart.length > 0) {
+      if (!window.confirm("Giỏ hàng đang có món. Xác nhận xóa giỏ hiện tại để sửa lại đơn cũ này?")) return;
+    }
+
+    setCart(orderToEdit.items);
+    setDiscountPercent(orderToEdit.discountPercent || 0);
+    setPaymentMethod(orderToEdit.paymentMethod || 'cash');
+    
+    // Remove order from history so it doesn't duplicate
+    setOrders(prev => prev.filter(o => o.id !== orderId));
+    
+    setIsOrderHistoryOpen(false);
+    setIsCartOpen(true);
   };
 
   const subtotal = cart.reduce((s, i) => s + (i.price * i.quantity), 0);
@@ -131,6 +180,19 @@ export default function Home() {
             {isDark ? <Sun size={20} className="text-primary hidden sm:block" /> : <Moon size={20} className="text-accent opacity-60 hidden sm:block" />}
           </button>
 
+          {/* Order History Button */}
+          <button
+            onClick={() => setIsOrderHistoryOpen(true)}
+            className="bento-item p-2 sm:p-3 flex items-center justify-center hover:border-primary hover:shadow-md hover:bg-white transition-all shrink-0 relative"
+            title="Lịch sử đơn"
+          >
+             <Clock size={18} className="text-accent opacity-80 sm:hidden" />
+             <Clock size={20} className="text-accent opacity-80 hidden sm:block" />
+             {orders.length > 0 && (
+                <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border border-white" />
+             )}
+          </button>
+
           {/* Cart Button */}
           <button
             onClick={() => setIsCartOpen(true)}
@@ -161,6 +223,8 @@ export default function Home() {
           subtotal={subtotal}
           discountPercent={discountPercent}
           setDiscountPercent={setDiscountPercent}
+          paymentMethod={paymentMethod}
+          setPaymentMethod={setPaymentMethod}
           updateQuantity={updateQuantity}
           clearCart={clearCart}
           checkout={checkout}
@@ -176,6 +240,25 @@ export default function Home() {
           onSave={updateItemTags}
         />
       )}
+
+      {/* Checkout Modal */}
+      <CheckoutModal 
+        isOpen={isCheckoutModalOpen}
+        onClose={() => setIsCheckoutModalOpen(false)}
+        cart={cart}
+        total={total}
+        paymentMethod={paymentMethod}
+        onConfirm={confirmCheckout}
+      />
+
+      {/* Order History */}
+      <OrderHistory 
+        isOpen={isOrderHistoryOpen}
+        onClose={() => setIsOrderHistoryOpen(false)}
+        orders={orders}
+        onMarkAsPaid={markOrderAsPaid}
+        onEditOrder={editOrder}
+      />
     </div>
   );
 }

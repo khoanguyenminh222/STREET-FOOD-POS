@@ -27,7 +27,7 @@ export default function QuickTagModal({ item, onClose, onSave }) {
   if (!item) return null;
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-end">
+    <div className="fixed inset-0 z-60 flex items-end">
       {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/60 backdrop-blur-sm"

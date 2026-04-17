@@ -1,12 +1,5 @@
 import React from "react";
-import {
-  ShoppingBag,
-  Circle,
-  QrCode,
-  Minus,
-  Plus,
-  X,
-} from "lucide-react";
+import { ShoppingBag, Circle, QrCode, Minus, Plus, X } from "lucide-react";
 
 export const TAG_LABELS = {
   no_onion: { label: "Không hành" },
@@ -90,11 +83,13 @@ function CartFooter({
   subtotal,
   discountPercent,
   setDiscountPercent,
+  paymentMethod,
+  setPaymentMethod,
   checkout,
 }) {
   return (
     <div className="p-4 sm:p-5 lg:p-5 bg-background border-t border-border space-y-4">
-      <div className="flex items-center justify-between gap-2 border border-border bg-surface p-2 rounded-2xl lg:rounded-[1rem]">
+      <div className="flex items-center justify-between gap-2 border border-border bg-surface p-2 rounded-2xl lg:rounded-2xl">
         <span className="text-[10px] sm:text-xs font-black uppercase px-2 text-accent tracking-widest">
           Giảm giá (%)
         </span>
@@ -123,29 +118,38 @@ function CartFooter({
           {total.toLocaleString("vi-VN")}đ
         </span>
       </div>
-      <div className="grid grid-cols-2 gap-2">
-        <button className="flex flex-col items-center justify-center p-3 sm:p-4 rounded-2xl lg:rounded-[1.5rem] border border-border bg-surface hover:border-primary transition-all active:scale-95 group">
+      <div className="grid grid-cols-2 gap-2 mb-2">
+        <button 
+          onClick={() => setPaymentMethod('vietqr')}
+          className={`flex flex-col items-center justify-center p-3 sm:p-4 rounded-2xl lg:rounded-[1.5rem] border-2 transition-all active:scale-95 group 
+            ${paymentMethod === 'vietqr' ? 'border-primary bg-primary/10' : 'border-border bg-surface hover:border-primary/50'}`}
+        >
           <QrCode
             size={20}
-            className="mb-1 text-primary group-hover:scale-110 transition-transform"
+            className={`mb-1 transition-transform ${paymentMethod === 'vietqr' ? 'text-primary' : 'text-accent/50 group-hover:text-primary'} group-hover:scale-110`}
           />
-          <span className="text-[10px] font-black uppercase text-accent">
+          <span className={`text-[10px] font-black uppercase ${paymentMethod === 'vietqr' ? 'text-primary' : 'text-accent/50'}`}>
             VietQR
           </span>
         </button>
-        <button className="flex flex-col items-center justify-center p-3 sm:p-4 rounded-2xl lg:rounded-[1.5rem] bg-primary text-white shadow-lg active:scale-95 transition-all group hover:opacity-90">
+        <button 
+          onClick={() => setPaymentMethod('cash')}
+          className={`flex flex-col items-center justify-center p-3 sm:p-4 rounded-2xl lg:rounded-[1.5rem] border-2 transition-all active:scale-95 group 
+            ${paymentMethod === 'cash' ? 'border-primary bg-primary text-white shadow-lg shadow-primary/30' : 'border-border bg-surface text-accent/50 hover:border-primary/50'}`}
+        >
           <div className="text-xl mb-1 group-hover:rotate-12 transition-transform">
             💵
           </div>
-          <span className="text-[10px] font-black uppercase">Tiền mặt</span>
+          <span className={`text-[10px] font-black uppercase ${paymentMethod === 'cash' ? 'text-white' : 'text-accent/50'}`}>Tiền mặt</span>
         </button>
       </div>
       <button
         disabled={cart.length === 0}
         onClick={checkout}
-        className="w-full py-4 text-base lg:text-sm bg-accent text-white rounded-2xl lg:rounded-[1.5rem] font-black uppercase tracking-widest shadow-xl active:scale-95 transition-all disabled:opacity-30 hover:opacity-90"
+        className="w-full py-4 text-base lg:text-sm bg-accent text-white rounded-2xl lg:rounded-[1.5rem] font-black uppercase tracking-widest shadow-xl active:scale-95 transition-all disabled:opacity-30 hover:opacity-90 flex items-center justify-center gap-2"
       >
-        Xác nhận
+        <span>Xác nhận</span>
+        {cart.length > 0 && <span className="text-[10px] font-bold bg-white/20 px-2 py-0.5 rounded-full">{paymentMethod === 'vietqr' ? 'VietQR' : 'Cash'}</span>}
       </button>
     </div>
   );
@@ -159,6 +163,8 @@ export default function Cart({
   subtotal,
   discountPercent,
   setDiscountPercent,
+  paymentMethod,
+  setPaymentMethod,
   updateQuantity,
   clearCart,
   checkout,
@@ -213,6 +219,8 @@ export default function Cart({
           subtotal={subtotal}
           discountPercent={discountPercent}
           setDiscountPercent={setDiscountPercent}
+          paymentMethod={paymentMethod}
+          setPaymentMethod={setPaymentMethod}
           checkout={checkout}
         />
       </aside>
@@ -278,6 +286,8 @@ export default function Cart({
               subtotal={subtotal}
               discountPercent={discountPercent}
               setDiscountPercent={setDiscountPercent}
+              paymentMethod={paymentMethod}
+              setPaymentMethod={setPaymentMethod}
               checkout={checkout}
             />
           </div>
